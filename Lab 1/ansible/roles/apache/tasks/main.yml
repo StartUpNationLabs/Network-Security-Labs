@@ -1,0 +1,51 @@
+---
+- name: Installer le paquet apache2
+  apt:
+    name: apache2
+    state: present
+    update_cache: yes
+
+- name: Activer le module SSL
+  command: a2enmod ssl
+
+- name: Activer le module headers
+  command: a2enmod headers
+
+- name: Activer le module cgid
+  command: a2enmod cgid
+
+- name: Activer le module rewrite
+  command: a2enmod rewrite
+
+
+- name: Uploader le script CGI
+  copy:
+    src: templates/scriptpass.pl  # Chemin local vers le script CGI
+    dest: /usr/lib/cgi-bin/scriptpass.pl
+    owner: root
+    group: root
+    mode: "0755"  # -rwxr-xr-x
+
+- name: Uploader la nouvelle page d'authentification
+  copy:
+    src: templates/index.html  # Chemin local vers la page HTML
+    dest: /var/www/html/index.html
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Uploader le fichier default-ssl.conf
+  copy:
+    src: templates/default-ssl.conf
+    dest: /etc/apache2/sites-available/default-ssl.conf
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Activer le site default-ssl
+  command: a2ensite default-ssl
+
+- name: Redémarrer Apache
+  service:
+    name: apache2
+    state: restarted

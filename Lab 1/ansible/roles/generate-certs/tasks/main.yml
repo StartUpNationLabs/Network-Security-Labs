@@ -1,0 +1,59 @@
+---
+- name: Créer le répertoire pour les fichiers de clé et certificat
+  file:
+    path: "{{ output_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0777"
+
+- name: Générer la clé privée RSA
+  command:
+    cmd: "openssl genrsa -out {{ output_dir }}/private.key {{ rsa_key_size }}"
+  args:
+    creates: "{{ output_dir }}/private.key"
+
+- name: Générer une demande de certificat (CSR)
+  command:
+    cmd: >
+      openssl req -new -key {{ output_dir }}/private.key
+      -out {{ output_dir }}/certificate.csr
+      -subj "/C={{ country_name }}/ST={{ state_name }}/L={{ locality_name }}/O={{ org_name }}/OU={{ org_unit }}/CN={{ common_name }}"
+  args:
+    creates: "{{ output_dir }}/certificate.csr"
+
+- name: Générer un certificat auto-signé
+  command:
+    cmd: >
+      openssl x509 -req -days {{ cert_days_valid }}
+      -in {{ output_dir }}/certificate.csr
+      -signkey {{ output_dir }}/private.key
+      -out {{ output_dir }}/certificate.crt
+  args:
+    creates: "{{ output_dir }}/certificate.crt"
+
+- name: Vérifier les fichiers générés
+  stat:
+    path: "{{ output_dir }}/certificate.crt"
+  register: cert_status
+
+- name: Afficher un message de succès
+  debug:
+    msg: "Certificat auto-signé créé avec succès dans {{ output_dir }}/certificate.crt"
+  when: cert_status.stat.exists
+
+- name: Configurer les permissions de la clé privée
+  file:
+    path: ./output/private.key
+    owner: root
+    group: root
+    mode: "0744"
+    state: file
+
+- name: Configurer les permissions du certificat
+  file:
+    path: ./output/certificate.crt
+    owner: root
+    group: root
+    mode: "0744"
+    state: file
