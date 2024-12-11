@@ -1,0 +1,33 @@
+---
+- name: Retrieve network interfaces
+  command: ip a
+  register: ip_a_output
+
+- name: Parse the interface name that is down
+  set_fact:
+    down_interface: "{{ item }}"
+  with_items: "{{ ip_a_output.stdout_lines }}"
+  when: item is search('state DOWN')
+  vars:
+    item: "{{ item.split(':')[1] | trim }}"
+
+- name: Ensure down_interface is set
+  fail:
+    msg: "No interface found in DOWN state."
+  when: down_interface is not defined
+
+- name: Create netplan configuration file
+  copy:
+    dest: /etc/netplan/01-netcfg.yaml
+    content: |
+      network:
+        version: 2
+        ethernets:
+          {{ down_interface }}:
+            dhcp4: true
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Apply netplan configuration
+  command: netplan apply
