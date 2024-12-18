@@ -1,28 +1,28 @@
 ---
-- hosts: localhost
-  gather_facts: false
-  become: true
-  vars:
-    rsa_key_size: 2048
-    cert_days_valid: 365
-    country_name: "FR"
-    state_name: "Alpes-Martime"
-    locality_name: "Sophia-Antipolis"
-    org_name: "Kentucky Fried Chicken"
-    org_unit: "KFC"
-    common_name: "kfc.ozeliurs.com"
-    output_dir: "./output"
-  tasks:
-    - include_role:
-        name: generate-certs
+# - hosts: localhost
+#   gather_facts: false
+#   become: true
+#   vars:
+#     rsa_key_size: 2048
+#     cert_days_valid: 365
+#     country_name: "FR"
+#     state_name: "Alpes-Martime"
+#     locality_name: "Sophia-Antipolis"
+#     org_name: "Kentucky Fried Chicken"
+#     org_unit: "KFC"
+#     common_name: "kfc.ozeliurs.com"
+#     output_dir: "./output"
+#   tasks:
+#     - include_role:
+#         name: generate-certs
 
 - hosts: network_servers
   become: true
   vars:
     output_dir: "{{ playbook_dir }}/output"
   roles:
-    - copy-certs
-    - apache
-    - firewall
+    # - copy-certs
+    # - apache
+    # - firewall
     - postfix
     - imaps

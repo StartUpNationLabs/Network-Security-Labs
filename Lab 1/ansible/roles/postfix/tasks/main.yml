@@ -14,7 +14,7 @@
   debconf:
     name: postfix
     question: postfix/mailname
-    value: "{{ ansible_fqdn }}"
+    value: martin-serveur.kfc.ozeliurs.com
     vtype: string
 
 - name: Installer Postfix et Mailutils
@@ -30,18 +30,121 @@
     state: started
     enabled: yes
 
-- name: Assurer que les variables essentielles sont définies dans main.cf
-  blockinfile:
+- name: Ajouter ou mettre à jour la directive mydomain
+  lineinfile:
     path: /etc/postfix/main.cf
-    marker: "# {mark} ANSIBLE MANAGED BLOCK"
-    block: |
-      myhostname = lubuntu.ozeliurs.com
-      mydomain = ozeliurs.com
-      mynetworks = 127.0.0.0/8
-      alias_maps = hash:/etc/aliases
-      alias_database = hash:/etc/aliases
+    regexp: '^mydomain\s*='
+    line: 'mydomain = kfc.ozeliurs.com'
+    state: present
 
-- name: Recharger le service Postfix pour appliquer les changements
+#Ca marche pas encore
+- name: Activer le mode debug pour le démon SMTP dans master.cf
+  lineinfile:
+    path: /etc/postfix/master.cf
+    regexp: '^smtp\s+inet\s+y'
+    line: 'smtp inet n - n - - smtpd -v'
+    state: present
+
+- name: Recharger Postfix avec systemctl reload
+  command: systemctl reload postfix
+  become: true
+  changed_when: 
+  
+- name: Créer un utilisateur local Alice
+  user:
+    name: alice
+    state: present
+
+- name: Envoyer un mail à Alice via Telnet
+  shell: |
+    echo -e "HELO localhost\nMAIL FROM:<test@localhost>\nRCPT TO:<alice@localhost>\nDATA\nSubject: Test Telnet\nThis is a test email.\n.\nQUIT\n" | telnet localhost 25
+  register: telnet_output
+
+- name: Vérifier que le mail est présent pour Alice avec la commande mail
+  shell: |
+    echo | sudo -u alice mail
+  register: mail_output
+  failed_when: "'Test Telnet' not in mail_output.stdout"
+
+- name: Vérifier les logs de Postfix
+  shell: |
+    grep 'test@localhost' /var/log/mail.log | grep 'alice@localhost'
+  register: mail_log_output
+  failed_when: mail_log_output.stdout == ""
+
+- name: Mettre à jour inet_interfaces
+  lineinfile:
+    path: /etc/postfix/main.cf
+    regexp: '^inet_interfaces\s*='
+    line: 'inet_interfaces = all'
+    state: present
+
+- name: Mettre à jour mynetworks
+  lineinfile:
+    path: /etc/postfix/main.cf
+    regexp: '^mynetworks\s*='
+    line: 'mynetworks = 127.0.0.0/8, 192.168.1.0/24'
+    state: present
+
+- name: Mettre à jour mydestination
+  lineinfile:
+    path: /etc/postfix/main.cf
+    regexp: '^mydestination\s*='
+    line: 'mydestination = $myhostname, localhost.$mydomain, localhost, $mydomain'
+    state: present
+
+- name: Stopper le service Postfix
   service:
     name: postfix
-    state: restarted
+    state: stopped
+
+- name: Démarrer le service Postfix
+  service:
+    name: postfix
+    state: started
+
+- name: Tester l'envoi de mail à un utilisateur légitime (Alice)
+  shell: |
+    echo -e "HELO kfc.ozeliurs.com\nMAIL FROM:<test@localhost>\nRCPT TO:<alice@localhost>\nDATA\nSubject: Test to Alice\nThis is a test email to Alice.\n.\nQUIT\n" | telnet localhost 25
+  register: telnet_alice_output
+  failed_when: "'250 2.0.0 Ok' not in telnet_alice_output.stdout"
+
+- name: Tester l'envoi de mail à un utilisateur non défini
+  shell: |
+    echo -e "HELO kfc.ozeliurs.com\nMAIL FROM:<test@localhost>\nRCPT TO:<undefined@localhost>\nDATA\nSubject: Test to Undefined\nThis is a test email to Undefined.\n.\nQUIT\n" | telnet localhost 25
+  register: telnet_undefined_output
+  failed_when: "'550 5.1.1 User unknown' not in telnet_undefined_output.stdout"
+
+- name: Vérifier l'existence d'Alice avec VRFY
+  shell: |
+    echo -e "VRFY alice\nQUIT\n" | telnet localhost 25
+  register: vrfy_alice_output
+  failed_when: "'250 2.0.0' not in vrfy_alice_output.stdout"
+
+- name: Vérifier l'absence d'un utilisateur non défini avec VRFY
+  shell: |
+    echo -e "VRFY undefined\nQUIT\n" | telnet localhost 25
+  register: vrfy_undefined_output
+  failed_when: "'550 5.1.1 User unknown' not in vrfy_undefined_output.stdout"
+
+- name: Ajouter un alias pour Alice (Alice.Elle)
+  lineinfile:
+    path: /etc/aliases
+    regexp: '^Alice\.Elle\s*:\s*'
+    line: 'Alice.Elle: alice'
+    state: present
+
+- name: Mettre à jour la base des alias Postfix
+  command: postalias /etc/aliases
+
+- name: Recharger Postfix après la mise à jour des alias
+  service:
+    name: postfix
+    state: reloaded
+
+- name: Autoriser les connexions au port 25 via le firewall
+  ufw:
+    rule: allow
+    port: 25
+    proto: tcp
+
