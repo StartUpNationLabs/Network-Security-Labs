@@ -1,0 +1,47 @@
+---
+- name: Mettre à jour le cache APT
+  apt:
+    update_cache: yes
+
+- name: Pré-configurer Postfix pour l'option "Site Internet"
+  debconf:
+    name: postfix
+    question: postfix/main_mailer_type
+    value: 'Internet Site'
+    vtype: string
+
+- name: Définir le nom d'hôte pour Postfix
+  debconf:
+    name: postfix
+    question: postfix/mailname
+    value: "{{ ansible_fqdn }}"
+    vtype: string
+
+- name: Installer Postfix et Mailutils
+  apt:
+    name:
+      - postfix
+      - mailutils
+    state: present
+
+- name: Vérifier que le service Postfix est actif
+  service:
+    name: postfix
+    state: started
+    enabled: yes
+
+- name: Assurer que les variables essentielles sont définies dans main.cf
+  blockinfile:
+    path: /etc/postfix/main.cf
+    marker: "# {mark} ANSIBLE MANAGED BLOCK"
+    block: |
+      myhostname = lubuntu.cs.sr
+      mydomain = cs.sr
+      mynetworks = 127.0.0.0/8
+      alias_maps = hash:/etc/aliases
+      alias_database = hash:/etc/aliases
+
+- name: Recharger le service Postfix pour appliquer les changements
+  service:
+    name: postfix
+    state: restarted
