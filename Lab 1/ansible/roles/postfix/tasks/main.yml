@@ -1,0 +1,31 @@
+---
+- name: Mettre à jour le cache APT
+  apt:
+    update_cache: yes
+
+- name: Pré-configurer Postfix pour l'option "Site Internet"
+  debconf:
+    name: postfix
+    question: postfix/main_mailer_type
+    value: 'Internet Site'
+    vtype: string
+
+- name: Définir le nom d'hôte pour Postfix
+  debconf:
+    name: postfix
+    question: postfix/mailname
+    value: "{{ ansible_fqdn }}"
+    vtype: string
+
+- name: Installer Postfix et Mailutils
+  apt:
+    name:
+      - postfix
+      - mailutils
+    state: present
+
+- name: Vérifier que le service Postfix est actif
+  service:
+    name: postfix
+    state: started
+    enabled: yes
