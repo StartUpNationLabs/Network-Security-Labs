@@ -29,3 +29,19 @@
     name: postfix
     state: started
     enabled: yes
+
+- name: Assurer que les variables essentielles sont définies dans main.cf
+  blockinfile:
+    path: /etc/postfix/main.cf
+    marker: "# {mark} ANSIBLE MANAGED BLOCK"
+    block: |
+      myhostname = lubuntu.cs.sr
+      mydomain = cs.sr
+      mynetworks = 127.0.0.0/8
+      alias_maps = hash:/etc/aliases
+      alias_database = hash:/etc/aliases
+
+- name: Recharger le service Postfix pour appliquer les changements
+  service:
+    name: postfix
+    state: restarted
