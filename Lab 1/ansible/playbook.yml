@@ -25,3 +25,4 @@
     - apache
     - firewall
     - postfix
+    - imaps

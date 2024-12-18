@@ -57,3 +57,20 @@
     group: root
     mode: "0744"
     state: file
+
+- name: Générer un certificat auto-signé pour Dovecot
+  command: >
+    openssl req -new -x509 -days 365 -nodes
+    -out ./output/dovecot.pem
+    -keyout ./output/dovecot.key
+    -subj "/C={{ country_name }}/ST={{ state_name }}/L={{ locality_name }}/O={{ org_name }}/OU={{ org_unit }}/CN={{ common_name }}"
+
+- name: Définir les permissions sur les fichiers du certificat
+  file:
+    path: "{{ item }}"
+    owner: root
+    group: root
+    mode: '0744'
+  loop:
+    - ./output/dovecot.pem
+    - ./output/dovecot.key
