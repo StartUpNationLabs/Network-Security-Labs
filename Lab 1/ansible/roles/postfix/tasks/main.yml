@@ -35,8 +35,8 @@
     path: /etc/postfix/main.cf
     marker: "# {mark} ANSIBLE MANAGED BLOCK"
     block: |
-      myhostname = lubuntu.cs.sr
-      mydomain = cs.sr
+      myhostname = lubuntu.ozeliurs.com
+      mydomain = ozeliurs.com
       mynetworks = 127.0.0.0/8
       alias_maps = hash:/etc/aliases
       alias_database = hash:/etc/aliases
