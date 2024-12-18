@@ -1,0 +1,13 @@
+---
+- name: Installer dovecot-core et dovecot-imapd
+  apt:
+    name:
+      - dovecot-core
+      - dovecot-imapd
+    state: present
+
+- name: S'assurer que le service Dovecot est actif
+  service:
+    name: dovecot
+    state: started
+    enabled: yes

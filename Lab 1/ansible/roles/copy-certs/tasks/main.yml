@@ -14,3 +14,19 @@
     owner: root
     group: root
     mode: "0600"
+
+- name: Déplacer la clé privée Dovecot dans /etc/ssl/private
+  copy:
+    src: "{{ output_dir }}/dovecot.key"
+    dest: "/etc/ssl/private/dovecot.key"
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Déplacer le certificat Dovecot dans /etc/ssl/certs
+  copy:
+    src: "{{ output_dir }}/dovecot.pem"
+    dest: "/etc/ssl/certs/dovecot.pem"
+    owner: root
+    group: root
+    mode: "0600"
